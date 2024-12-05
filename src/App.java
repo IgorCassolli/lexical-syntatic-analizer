@@ -4,7 +4,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class App {
-
     private static final String TYPE_REGEX = "^(int|float|char|double|byte|short|long|boolean|" +
                                             "Integer|Float|Character|Double|Byte|Short|Long" +
                                             "|Boolean|String|Object)$";
@@ -13,7 +12,11 @@ public class App {
 
     private static final String CONDITION_REGEX = "\\((.+?)\\)"; 
     private static final String VALID_CONDITIONS_REGEX = "^\\s*[a-zA-Z]+\\s*(==|!=|<=|>=|<|>)\\s*[a-zA-Z0-9]+\\s*$";
-    private static final String CALCULATION_REGEX = "\\{.*?(\\+|\\-|\\*|\\/|\\+\\+).+?\\}";
+    private static final String CALCULATION_REGEX = "\\b[a-zA-Z_][a-zA-Z0-9_]*\\s*=\\s*.*[+\\-*/]\\s*.*\\b;";
+
+
+    private static final String INIT_FOR_REGEX = "^(int|Integer)\\s+[a-zA-Z_][a-zA-Z0-9_]*\\s*=\\s*\\d+$";
+    private static final String INCREMENT_REGEX = "^[a-zA-Z_][a-zA-Z0-9_]*\\s*(\\+\\+|--|\\+=\\s*\\d+|-=\\s*\\d+|=\\s*[a-zA-Z_][a-zA-Z0-9_]*\\s*[+\\-*/]\\s*\\d+)$";
 
 
     public static void main(String[] args) {
@@ -133,13 +136,11 @@ public class App {
 
                         if (Pattern.matches(VALID_CONDITIONS_REGEX, condition)) {
                             hasError = false;
-                            System.out.println("Linha " + lineNumber + " contém um comando if válido.");
                             System.out.println("Condição identificada: " + condition);
                         } else {
                             System.err.println("Erro na linha " + lineNumber + ": condição inválida no if --> " + condition);
                         }
                     } else {
-                        // Retorna erro e já sai da função
                         System.err.println("Erro na linha " + lineNumber + ": não foi possível identificar a condição no if.");
                     }
 
@@ -150,54 +151,13 @@ public class App {
                         if (calculationMatcher.find()) {
                             String calculation = calculationMatcher.group(0).replaceAll("[{}]", "").trim(); // Remove { }
                             System.out.println("Cálculo identificado dentro do bloco: " + calculation);
+                            System.out.println("Linha " + lineNumber + " contém um comando if válido.");
                         } else {
                             System.err.println("Erro na linha " + lineNumber + ": cálculo inválido ou ausente no bloco do if.");
                         }
                     }
                 } else if (line.startsWith("switch")) {
-                    int inicioParenteses = line.indexOf('(');
-                    int fimParenteses = line.indexOf(')');
-                    if (inicioParenteses != -1 && fimParenteses != -1) {
-                        String variavel = line.substring(inicioParenteses + 1, fimParenteses).trim();
-                        System.out.println("Variável do switch: " + variavel);
-                    } else {
-                        System.err.println("Erro na linha " + lineNumber + ": formato inválido do switch.");
-                        return;
-                    }
-                
-                    // Procurar pelos cases e seus blocos
-                    while ((line = reader.readLine()) != null && !line.trim().equals("}")) {
-                        line = line.trim();
-                
-                        if (line.startsWith("case")) {
-                            if (line.contains(":")) {  
-                                // Procurar pelo bloco de cálculo no case
-                                Matcher calculationMatcher = Pattern.compile(CALCULATION_REGEX).matcher(line);
-                
-                                if (calculationMatcher.find()) {
-                                    String calculation = calculationMatcher.group(0).replaceAll("[{}]", "").trim(); // Remove { }
-                                    System.out.println("Cálculo identificado no case: " + calculation);
-                                } else {
-                                    System.err.println("Erro na linha " + lineNumber + ": cálculo inválido ou ausente no bloco do case.");
-                                }
-                            } else {
-                                System.err.println("Erro na linha " + lineNumber + ": case mal formatado.");
-                            }
-                        } else if (line.startsWith("default")) {
-                            if (line.contains(":")) {
-                                Matcher calculationMatcher = Pattern.compile(CALCULATION_REGEX).matcher(line);
-                
-                                if (calculationMatcher.find()) {
-                                    String calculation = calculationMatcher.group(0).replaceAll("[{}]", "").trim(); // Remove { }
-                                    System.out.println("Cálculo identificado no default: " + calculation);
-                                } else {
-                                    System.err.println("Erro na linha " + lineNumber + ": cálculo inválido ou ausente no bloco do default.");
-                                }
-                            } else {
-                                System.err.println("Erro na linha " + lineNumber + ": default mal formatado.");
-                            }
-                        }
-                    }
+                    
                 } else {
                     System.err.println("Erro na linha " + lineNumber + ": não identificado condição if ou switch --> " + line);
                 }
@@ -210,20 +170,96 @@ public class App {
             int lineNumber = 1;
 
             while ((line = reader.readLine()) != null) {
+                System.out.println("\n");
+
                 line = line.trim();
                 if (line.isEmpty()) {
                     lineNumber++;
                     continue;
                 }
 
-                if (Pattern.matches(WHILE_REGEX, line)) {
-                    System.out.println("Linha " + lineNumber + " contém um laço while válido.");
-                } else if (Pattern.matches(FOR_REGEX, line)) {
-                    System.out.println("Linha " + lineNumber + " contém um laço for válido.");
-                } else {
-                    System.err.println("Erro na linha " + lineNumber + ": comando de laço inválido -> " + line);
-                }
+                if (line.startsWith("while")) {
+                    Matcher conditionMatcher = Pattern.compile(CONDITION_REGEX).matcher(line);
+                    boolean hasError = true;
+                    if (conditionMatcher.find()) {
+                        // Validar a condição dentro do parenteses
+                        String condition = conditionMatcher.group(1).trim(); 
 
+                        if (Pattern.matches(VALID_CONDITIONS_REGEX, condition)) {
+                            hasError = false;
+                            System.out.println("Condição identificada do laço while --> ( " + condition + " )");
+                        } else {
+                            System.err.println("Erro na linha " + lineNumber + ": condição inválida no while --> ( " + condition + " )");
+                        }
+                    } else {
+                        // Retorna erro e já sai da função
+                        System.err.println("Erro na linha " + lineNumber + ": Não foi possível identificar a condição no while.");
+                    }
+
+                    if(!hasError){
+                        Matcher calculationMatcher = Pattern.compile(CALCULATION_REGEX).matcher(line);
+
+                        if (calculationMatcher.find()) {
+                            String calculation = calculationMatcher.group(0).replaceAll("[{}]", "").trim(); // Remove { }
+                            System.out.println("Cálculo identificado dentro do bloco while --> " + calculation);
+                            System.out.println("Linha " + lineNumber + " contém um comando while válido.");
+                        } else {
+                            System.err.println("Erro na linha " + lineNumber + ": cálculo inválido ou ausente no bloco do while.");
+                        }
+                    }
+                } else if (line.startsWith("for")) {
+                    Matcher conditionMatcher = Pattern.compile(CONDITION_REGEX).matcher(line);
+                    boolean hasError = true;
+                    if (conditionMatcher.find()) {
+                        String condition = conditionMatcher.group(1).trim(); 
+
+                        String[] partsOfFor = condition.split(";");
+                        if (partsOfFor.length != 3) {
+                            System.err.println("Erro na linha " + lineNumber + ": A estrutura do 'for' deve conter exatamente três partes separadas por ponto e vírgula.");
+                        } else {
+                            hasError = false;
+                        }
+
+                        String initialization = partsOfFor[0].trim();
+                        String conditionPart = partsOfFor[1].trim();
+                        String increment = partsOfFor[2].trim();
+                        
+                        if (!Pattern.matches(INIT_FOR_REGEX, initialization)) {
+                            System.err.println("Erro na linha " + lineNumber + ": Não identificado variável de inicio no laço for ");
+                        } else {
+                            hasError = false;
+                            System.out.println("Variavel de inicio identificada do laço for --> ( " + initialization + " )");
+                        }
+                        
+                        if (!Pattern.matches(VALID_CONDITIONS_REGEX, conditionPart)) {
+                            System.err.println("Erro na linha " + lineNumber + ": condição inválida no laço for --> (" + conditionPart + ") ");
+                        } else {
+                            hasError = false;
+                            System.out.println("Condição identificada do laço for --> ( " + conditionPart + " )");
+                        }
+
+                        if (!Pattern.matches(INCREMENT_REGEX, increment)) {
+                            System.err.println("Erro na linha " + lineNumber + ": não indentificada variável de incremento no laço for --> ( " + increment + ") ");
+                        }  else {
+                            hasError = false;
+                            System.out.println("Variável de incremento identificada no laço for --> ( " + increment + " )");
+                        }
+
+                        if(!hasError){
+                            Matcher calculationMatcher = Pattern.compile(CALCULATION_REGEX).matcher(line);
+
+                            if (calculationMatcher.find()) {
+                                String calculation = calculationMatcher.group(0).replaceAll("[{}]", "").trim(); // Remove { }
+                                System.out.println("Cálculo identificado dentro do bloco for --> " + calculation);
+                                System.out.println("Linha " + lineNumber + " contém um comando for válido.");
+                            } else {
+                                System.err.println("Erro na linha " + lineNumber + ": cálculo inválido ou ausente no bloco do for." + line);
+                            } 
+                        }
+                    } else {
+                        System.err.println("Erro na linha " + lineNumber + ": Não foi possível identificar a estrutura do for (ini_variável; condição; incremento/decremento).");
+                    }
+                }
                 lineNumber++;
             }
         }
