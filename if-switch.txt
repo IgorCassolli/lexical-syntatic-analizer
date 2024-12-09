@@ -1,3 +1,10 @@
 if (x >= y) { y = x ++ y; }
 if (a == b) { o = a / b; }
 if (c ->* d) { x = c - d; }
+if (x > 0) { a = b + c; }
+if (z != 5) { total = total + 1; }
+if (x > 5) a = b + c;
+switch (choice) { case 1: x = 10; break; }
+switch (choice) { case 1: x = 10; break; case 2: x = 20; break; }
+switch (choice) { case 1: { x = x + 1; break; } default: { y = y - 1; } }
+switch (number) { case 1: { x = 10; break; } case 2: { y = 20; break; } default: { z = 30; } }

@@ -1,4 +1,5 @@
 import java.io.*;
+import java.util.Arrays;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -157,7 +158,54 @@ public class App {
                         }
                     }
                 } else if (line.startsWith("switch")) {
-                    
+                    try {
+                        if (!line.startsWith("switch (") || !line.contains(") {") || !line.endsWith("}"))
+                            throw new RuntimeException("Erro: comando 'switch' deve ter o formato 'switch (condição) { corpo }'.");
+
+                        int startBodyIndex = line.indexOf("{");
+                        String body = line.substring(startBodyIndex+1, line.length() - 1);
+
+                        String[] cases = Arrays.stream(body.trim().split("case\\s+|default")).map(String::trim)
+                                .filter(extractedCase -> !extractedCase.isEmpty()) // Mantém apenas os não vazios
+                                .toArray(String[]::new);
+
+                        for (int i = 1; i < cases.length; i++) {
+                            String caseBody = cases[i].trim();
+
+                            if (!caseBody.contains(":")) {
+                                throw new RuntimeException("Erro: 'case' ou 'default' deve conter ':' após o valor.");
+                            }
+
+                            int colonIndex = caseBody.indexOf(":");
+                            String caseCommands = caseBody.substring(colonIndex + 1).trim();
+
+                            if (caseCommands.length() >= 2 && caseCommands.charAt(0) == '{' && caseCommands.charAt(caseCommands.length() - 1) == '}') {
+                                caseCommands = caseCommands.substring(1, caseCommands.length() - 1).trim(); // Remover as chaves
+                            }
+
+                            int semicolonCount = caseCommands.length() - caseCommands.replace(";", "").length();
+
+                            String[] commands = Arrays.stream(caseCommands.split(";")).map(String::trim)
+                                    .filter(command -> !command.isEmpty()) // Mantém apenas os não vazios
+                                    .toArray(String[]::new);
+
+                            if (semicolonCount != commands.length) {
+                                throw new RuntimeException("Erro: a quantidade de ';' não corresponde ao número de comandos.");
+                            }
+
+                            for (String command : commands) {
+                                if (!command.isBlank() && !(command.trim()+";").matches("[a-zA-Z]\\w*\\s*=\\s*[^;]+;") && !(command.trim()+";").trim().equals("break;")) {
+                                    throw new RuntimeException("Erro: O comando "+command+" não é um comando valido.");
+                                }
+                            }
+                        }
+
+                        System.out.println("Linha " + lineNumber + " contém um comando switch válido.");
+
+                    } catch (RuntimeException e){
+                        System.err.println("Erro na validação do switch da linha " + lineNumber + ": "+e.getMessage()+".");
+                    }
+
                 } else {
                     System.err.println("Erro na linha " + lineNumber + ": não identificado condição if ou switch --> " + line);
                 }
